@@ -65,6 +65,7 @@ export default async function handler(req, res) {
       temp: Math.round(forecast.main.temp),
       description: forecast.weather[0].description,
       humidity: forecast.main.humidity,
+      icon: forecast.weather[0].icon, // İkon kodunu ekledik
       date: forecastDate.toLocaleDateString('tr-TR'),
       time: forecastDate.toLocaleTimeString('tr-TR', { 
         hour: '2-digit', 

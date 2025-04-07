@@ -1,62 +1,38 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
+import { WeatherProvider, useWeather } from '../contexts/WeatherContext';
+import { WeatherProtocol } from '../protocols/WeatherProtocol';
+import { AssistantModel } from '../models/AssistantModel';
 
-export default function Home() {
-  const [location, setLocation] = useState(null);
-  const [weather, setWeather] = useState(null);
+const weatherProtocol = new WeatherProtocol();
+
+function WeatherApp() {
+  const { state, dispatch } = useWeather();
   const [userInput, setUserInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [aiResponse, setAiResponse] = useState(null);
 
   useEffect(() => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition((position) => {
-        setLocation({
-          lat: position.coords.latitude,
-          lon: position.coords.longitude
+        dispatch({
+          type: 'SET_LOCATION',
+          payload: {
+            lat: position.coords.latitude,
+            lon: position.coords.longitude
+          }
         });
       });
     }
   }, []);
 
-  const getWeatherData = async (type, lat, lon, targetDate = null) => {
-    try {
-      const endpoint = type === 'forecast' ? 'forecast' : 'weather';
-      const url = new URL(`/api/${endpoint}`, window.location.origin);
-      url.searchParams.append('lat', lat);
-      url.searchParams.append('lon', lon);
-      
-      // targetDate varsa ve boş string değilse ekle
-      if (targetDate) {
-        url.searchParams.append('targetDate', targetDate);
-        console.log('Target date added to request:', targetDate); // Debug için
-      }
-      
-      console.log('Requesting weather data:', url.toString()); // Debug için
-      
-      const response = await fetch(url);
-      const data = await response.json();
-      
-      console.log('Weather API response:', data); // Debug için
-      
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      
-      return data;
-    } catch (error) {
-      console.error('Weather data error:', error);
-      throw error;
-    }
-  };
-
   const handleUserInput = async (e) => {
     e.preventDefault();
     if (!userInput.trim()) return;
 
-    setLoading(true);
+    dispatch({ type: 'SET_LOADING', payload: true });
+    dispatch({ type: 'SET_AI_RESPONSE', payload: null });
+
     try {
-      // 1. Kullanıcı girdisini analiz et
+      // Analiz işlemi...
       const analysisResponse = await fetch('/api/analyze-input', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -64,52 +40,53 @@ export default function Home() {
       });
       
       const analysis = await analysisResponse.json();
-      
-      if (!analysis.needsWeather) {
-        setAiResponse("Hava durumu ile ilgili bir soru sormadınız. Nasıl yardımcı olabilirim?");
-        setLoading(false);
-        return;
-      }
+      console.log('Analysis Response:', analysis); // Debug log
 
-      // 2. Hava durumu verisini al
-      if (location) {
-        try {
-          const weatherData = await getWeatherData(
-            analysis.type,
-            location.lat,
-            location.lon,
-            analysis.targetDate // OpenAI'dan gelen tarih bilgisini kullan
-          );
+      if (state.location) {
+        const weatherData = await weatherProtocol[
+          analysis.type === 'forecast' ? 'getForecast' : 'getCurrentWeather'
+        ](
+          state.location.lat,
+          state.location.lon,
+          analysis.targetDate
+        );
 
-          // 3. OpenAI ile yanıt oluştur
-          const aiResponse = await fetch('/api/generate-response', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-              userInput,
-              weatherData: {
-                ...weatherData,
-                type: analysis.type
-              }
-            }),
-          });
-          
-          const aiData = await aiResponse.json();
-          setAiResponse(aiData.message);
-          setWeather({
+        console.log('Weather Data before dispatch:', weatherData); // Debug log
+
+        dispatch({
+          type: 'SET_WEATHER',
+          payload: {
             ...weatherData,
             type: analysis.type
-          });
-        } catch (error) {
-          console.error('Weather data error:', error);
-          setAiResponse(error.message || 'Hava durumu bilgisi alınamadı');
-        }
+          }
+        });
+
+        console.log('State after weather dispatch:', state.weather); // Debug log
+
+        // AI yanıtı oluştur
+        const assistantResponse = await fetch('/api/generate-response', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            userInput,
+            weatherData: weatherData
+          }),
+        });
+        
+        const aiData = await assistantResponse.json();
+        console.log('AI Response:', aiData); // Debug için
+
+        // AI yanıtını state'e kaydet
+        dispatch({
+          type: 'SET_AI_RESPONSE',
+          payload: aiData.message
+        });
       }
     } catch (error) {
-      console.error('Hata:', error);
-      setAiResponse('Bir hata oluştu. Lütfen tekrar deneyin.');
+      console.error('Error in handleUserInput:', error);
+      dispatch({ type: 'SET_ERROR', payload: error.message });
     } finally {
-      setLoading(false);
+      dispatch({ type: 'SET_LOADING', payload: false });
       setUserInput('');
     }
   };
@@ -131,7 +108,7 @@ export default function Home() {
           </p>
         </div>
 
-        {!location && (
+        {!state.location && (
           <div className="bg-portal-dark/50 border-l-4 border-portal-cyan p-4 mb-8 rounded-md">
             <div className="flex items-center">
               <svg className="h-6 w-6 text-portal-cyan mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -150,19 +127,19 @@ export default function Home() {
               type="text"
               value={userInput}
               onChange={(e) => setUserInput(e.target.value)}
-              placeholder="Hava durumunu sor... (örn: 'hava nasıl?' veya 'yarın hava nasıl olacak?')"
+              placeholder="Hava durumunu sor... (örn: 'Yarın parti yapmak için hava nasıl?' veya 'yarın hava nasıl olacak?')"
               className="flex-1 px-4 py-3 rounded-lg bg-portal-dark/50 border border-portal-blue/20 text-white placeholder-portal-blue/50 focus:outline-none focus:ring-2 focus:ring-portal-cyan focus:border-transparent transition duration-200"
             />
             <button 
               type="submit"
-              disabled={loading}
+              disabled={state.loading}
               className={`px-6 py-3 rounded-lg font-medium transition duration-200 ${
-                loading 
+                state.loading 
                   ? 'bg-portal-dark/50 text-portal-blue/50 cursor-not-allowed' 
                   : 'bg-portal-blue hover:bg-portal-cyan text-white shadow-md hover:shadow-lg'
               }`}
             >
-              {loading ? (
+              {state.loading ? (
                 <div className="flex items-center">
                   <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
@@ -177,35 +154,46 @@ export default function Home() {
           </form>
         </div>
         
-        {weather && !loading && (
+        {state.weather && !state.loading && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Hava durumu kartı */}
             <div className="bg-portal-dark/30 backdrop-blur-sm rounded-xl shadow-lg overflow-hidden border border-portal-blue/20">
               <div className="bg-gradient-to-r from-portal-blue to-portal-cyan px-6 py-4">
                 <h2 className="text-xl font-semibold text-white">
-                  {weather.type === 'forecast' ? 'Hava Durumu Tahmini' : 'Mevcut Hava Durumu'}
+                  {state.weather.type === 'forecast' ? 'Hava Durumu Tahmini' : 'Mevcut Hava Durumu'}
                 </h2>
-                {weather.type === 'forecast' && weather.date && (
+                {state.weather.date && (
                   <p className="text-sm text-white/80 mt-1">
-                    {weather.date}
+                    {state.weather.date} {state.weather.time}
                   </p>
                 )}
               </div>
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="text-4xl font-bold text-portal-cyan">
-                    {weather.temp}°C
+                  <div className="flex items-center">
+                    {state.weather.icon && (
+                      <img 
+                        src={`https://openweathermap.org/img/wn/${state.weather.icon}@2x.png`}
+                        alt={state.weather.description}
+                        className="w-16 h-16 mr-2"
+                      />
+                    )}
+                    <div className="text-4xl font-bold text-portal-cyan">
+                      {state.weather.temp !== undefined ? `${state.weather.temp}°C` : 'Yükleniyor...'}
+                    </div>
                   </div>
                   <div className="text-portal-blue">
-                    Nem: %{weather.humidity}
+                    Nem: {state.weather.humidity !== undefined ? `%${state.weather.humidity}` : 'Yükleniyor...'}
                   </div>
                 </div>
                 <div className="text-lg text-portal-blue capitalize">
-                  {weather.description}
+                  {state.weather.description || 'Yükleniyor...'}
                 </div>
               </div>
             </div>
 
-            {aiResponse && (
+            {/* AI yanıt kartı */}
+            {state.aiResponse && (
               <div className="bg-portal-dark/30 backdrop-blur-sm rounded-xl shadow-lg overflow-hidden border border-portal-green/20">
                 <div className="bg-gradient-to-r from-portal-green to-portal-cyan px-6 py-4">
                   <h2 className="text-xl font-semibold text-white">
@@ -214,7 +202,7 @@ export default function Home() {
                 </div>
                 <div className="p-6">
                   <p className="text-portal-blue leading-relaxed">
-                    {aiResponse}
+                    {state.aiResponse}
                   </p>
                 </div>
               </div>
@@ -223,5 +211,13 @@ export default function Home() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <WeatherProvider>
+      <WeatherApp />
+    </WeatherProvider>
   );
 }

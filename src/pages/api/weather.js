@@ -12,12 +12,21 @@ export default async function handler(req, res) {
     
     const data = await response.json();
     
-    res.status(200).json({
-      temp: data.main.temp,
+    const responseData = {
+      temp: Math.round(data.main.temp),
       description: data.weather[0].description,
-      humidity: data.main.humidity
-    });
+      humidity: data.main.humidity,
+      icon: data.weather[0].icon, // İkon kodunu ekledik
+      date: new Date().toLocaleDateString('tr-TR'),
+      time: new Date().toLocaleTimeString('tr-TR', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      })
+    };
+
+    res.status(200).json(responseData);
   } catch (error) {
+    console.error('Weather API error:', error);
     res.status(500).json({ error: 'Hava durumu bilgisi alınamadı' });
   }
 }
