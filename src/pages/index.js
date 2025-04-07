@@ -115,7 +115,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
+    <div className="min-h-screen bg-gradient-to-br from-portal-dark to-portal-dark/90">
       <Head>
         <title>Portalgup Hava Durumu Asistanı</title>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
@@ -123,43 +123,43 @@ export default function Home() {
 
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">
+          <h1 className="text-4xl font-bold text-portal-cyan mb-2">
             Portalgup Hava Durumu Asistanı
           </h1>
-          <p className="text-gray-600">
+          <p className="text-portal-blue">
             Yapay zeka destekli hava durumu asistanınız
           </p>
         </div>
 
         {!location && (
-          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8 rounded-md">
+          <div className="bg-portal-dark/50 border-l-4 border-portal-cyan p-4 mb-8 rounded-md">
             <div className="flex items-center">
-              <svg className="h-6 w-6 text-yellow-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="h-6 w-6 text-portal-cyan mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
-              <p className="text-yellow-700">
+              <p className="text-portal-cyan">
                 Konum bilgisi bekleniyor... Lütfen konum izni verin.
               </p>
             </div>
           </div>
         )}
 
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
+        <div className="bg-portal-dark/30 backdrop-blur-sm rounded-xl shadow-lg p-6 mb-8 border border-portal-blue/20">
           <form onSubmit={handleUserInput} className="flex gap-2">
             <input
               type="text"
               value={userInput}
               onChange={(e) => setUserInput(e.target.value)}
               placeholder="Hava durumunu sor... (örn: 'hava nasıl?' veya 'yarın hava nasıl olacak?')"
-              className="flex-1 px-4 py-3 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition duration-200"
+              className="flex-1 px-4 py-3 rounded-lg bg-portal-dark/50 border border-portal-blue/20 text-white placeholder-portal-blue/50 focus:outline-none focus:ring-2 focus:ring-portal-cyan focus:border-transparent transition duration-200"
             />
             <button 
               type="submit"
               disabled={loading}
               className={`px-6 py-3 rounded-lg font-medium transition duration-200 ${
                 loading 
-                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
-                  : 'bg-blue-500 hover:bg-blue-600 text-white shadow-md hover:shadow-lg'
+                  ? 'bg-portal-dark/50 text-portal-blue/50 cursor-not-allowed' 
+                  : 'bg-portal-blue hover:bg-portal-cyan text-white shadow-md hover:shadow-lg'
               }`}
             >
               {loading ? (
@@ -179,41 +179,41 @@ export default function Home() {
         
         {weather && !loading && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4">
+            <div className="bg-portal-dark/30 backdrop-blur-sm rounded-xl shadow-lg overflow-hidden border border-portal-blue/20">
+              <div className="bg-gradient-to-r from-portal-blue to-portal-cyan px-6 py-4">
                 <h2 className="text-xl font-semibold text-white">
                   {weather.type === 'forecast' ? 'Hava Durumu Tahmini' : 'Mevcut Hava Durumu'}
                 </h2>
                 {weather.type === 'forecast' && weather.date && (
-                  <p className="text-sm text-blue-100 mt-1">
+                  <p className="text-sm text-white/80 mt-1">
                     {weather.date}
                   </p>
                 )}
               </div>
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="text-4xl font-bold text-gray-800">
+                  <div className="text-4xl font-bold text-portal-cyan">
                     {weather.temp}°C
                   </div>
-                  <div className="text-gray-500">
+                  <div className="text-portal-blue">
                     Nem: %{weather.humidity}
                   </div>
                 </div>
-                <div className="text-lg text-gray-600 capitalize">
+                <div className="text-lg text-portal-blue capitalize">
                   {weather.description}
                 </div>
               </div>
             </div>
 
             {aiResponse && (
-              <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                <div className="bg-gradient-to-r from-purple-500 to-purple-600 px-6 py-4">
+              <div className="bg-portal-dark/30 backdrop-blur-sm rounded-xl shadow-lg overflow-hidden border border-portal-green/20">
+                <div className="bg-gradient-to-r from-portal-green to-portal-cyan px-6 py-4">
                   <h2 className="text-xl font-semibold text-white">
                     Asistan Yanıtı
                   </h2>
                 </div>
                 <div className="p-6">
-                  <p className="text-gray-700 leading-relaxed">
+                  <p className="text-portal-blue leading-relaxed">
                     {aiResponse}
                   </p>
                 </div>
