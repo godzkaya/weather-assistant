@@ -1,0 +1,13 @@
+version: '3'
+services:
+  weather-assistant:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
